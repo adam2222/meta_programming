@@ -94,14 +94,51 @@ class SQLObject
   end
 
   def insert
-    # ...
+    column_names = self.class.columns[1..-1]
+    num_of_columns = column_names.count
+
+    question_marks = []
+    num_of_columns.times { question_marks << '?' }
+
+    column_names = column_names.join(",")
+    question_marks = question_marks.join(",")
+
+    values = self.attribute_values
+
+    DBConnection.execute(<<-SQL, *values)
+      INSERT INTO
+        #{self.class.table_name} (#{column_names})
+      VALUES
+        (#{question_marks})
+    SQL
+
+    self.id = DBConnection.last_insert_row_id
   end
 
   def update
-    # ...
+    column_names = self.class.columns[1..-1]
+    num_of_columns = column_names.count
+
+    column_names = column_names.map { |name| "#{name} = ?" }.join(',')
+
+    values = self.attribute_values[1..-1]
+
+    DBConnection.execute(<<-SQL, *values)
+      UPDATE
+        #{self.class.table_name}
+      SET
+        #{column_names}
+      WHERE
+        id = #{self.id}
+    SQL
+
   end
 
   def save
-    # ...
+    if self.id.nil?
+      insert
+    else
+      update
+    end
   end
 end
